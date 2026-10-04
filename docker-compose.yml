@@ -1,0 +1,57 @@
+services:
+  mysql:
+    image: mysql:8.0.36-debian
+    container_name: gummysylic-mysql
+    environment:
+      - MYSQL_ROOT_PASSWORD=${DB_PASSWORD:-root}
+      - MYSQL_DATABASE=gummysylic
+    ports:
+      - "3307:3306"   # host 3307 -> container 3306 (3306 already used by local MySQL)
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p${DB_PASSWORD:-root}"]
+      interval: 5s
+      retries: 10
+    restart: unless-stopped
+
+  backend:
+    build: ./work/work
+    image: erikvisualalign/gummysylic-backend:0.9.0
+    container_name: gummysylic-backend
+    environment:
+      - AI_PROVIDER=poolside
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+      - OPENROUTER_MODEL=${OPENROUTER_MODEL:-poolside/laguna-xs-2.1:free}
+      - API_KEY=${API_KEY:-}
+      - DBMS_CONNECTION=jdbc:mysql://mysql:3306/gummysylic
+      - DB_USERNAME=root
+      - DB_PASSWORD=${DB_PASSWORD:-root}
+    ports:
+      - "8080:8080"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+
+  promptbot:
+    build:
+      context: .
+      dockerfile: Dockerfile.bot
+    image: erikvisualalign/gummysylic-promptbot:0.9.0
+    container_name: gummysylic-promptbot
+    environment:
+      - BOT_TOKEN=${BOT_TOKEN}
+      - BACKEND_URL=http://backend:8080
+      - BACKEND_API_KEY=${API_KEY:-}
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  mysql-data:
+

@@ -1,0 +1,19 @@
+# Secrets
+.env
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Java / Maven
+work/work/target/
+*.class
+
+# Logs
+*.log
+build-backend.log
+
+# IDE
+.idea/
+.vscode/
